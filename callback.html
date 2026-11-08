@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>MPR OS</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+         background: #222b2c; color: #f5f2ec; font: 18px/1.5 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  p { max-width: 30em; padding: 0 24px; }
+</style>
+</head>
+<body>
+<p id="msg">Returning to the residence.</p>
+<script>
+/*
+ * Spotify sign-in relay for MPR OS (docs/INTEGRATIONS.md, section 3.2).
+ * Spotify only redirects to HTTPS. This page forwards the phone to residence-api
+ * on the home network, which exchanges the code with a secret that never leaves
+ * the NAS (the code alone is useless). The NAS puts its own address in `state`
+ * ("<nonce>~<host>:<port>"); only private network addresses are accepted, so
+ * this page cannot send anyone elsewhere.
+ */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var state = q.get('state') || '';
+  var host = state.split('~')[1] || '';
+  var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3}):(\d{2,5})$/.exec(host);
+  var ok = m && m.slice(1, 5).every(function (n) { return +n < 256; }) &&
+    (m[1] === '10' || (m[1] === '192' && m[2] === '168') || (m[1] === '172' && +m[2] >= 16 && +m[2] <= 31));
+  if (!ok) {
+    document.getElementById('msg').textContent = 'This link does not come from MPR OS.';
+    return;
+  }
+  location.replace('http://' + host + '/callback' + location.search);
+  setTimeout(function () {
+    document.getElementById('msg').textContent =
+      'If nothing happens, make sure this phone is on the home Wi-Fi, then scan the code on the television again.';
+  }, 4000);
+})();
+</script>
+</body>
+</html>
